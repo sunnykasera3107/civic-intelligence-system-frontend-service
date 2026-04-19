@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Intelligence System</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <div class="logo">
+                <span class="logo-text">Civic Intelligence System</span>
+            </div>
+        </div>
+        
+        <!-- Filters in Navbar Center -->
+        <div class="navbar-center" id="navbarCenter" style="display: none;">
+            <div class="navbar-filters">
+                <div class="navbar-filter-group">
+                    <select id="categoryFilter" class="navbar-filter-select">
+                        <option value="">Category</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <select id="subcategoryFilter" class="navbar-filter-select">
+                        <option value="">Subcategory</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <select id="statusFilter" class="navbar-filter-select">
+                        <option value="">Status</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <button type="button" id="showAllBtn" class="filter-action-btn">Show All</button>
+                </div>
+
+                <div class="navbar-filter-group navbar-filter-group-location">
+                    <input type="text" id="locationFilter" class="navbar-filter-select" placeholder="Search Location" autocomplete="off">
+                    <div id="locationSuggestions" class="location-suggestions" style="display: none;"></div>
+                </div>
+
+                <div class="navbar-filter-group toggle-group-navbar">
+                    <label class="toggle-label-navbar">
+                        <input type="checkbox" id="myComplaintsToggle" class="toggle-checkbox-navbar">
+                        <span class="toggle-text-navbar">Mine</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="navbar-right">
+            <button class="mobile-filter-btn" id="mobileFilterBtn" title="Filters">🔍</button>
+                        
+            <button class="btn-new-complaint-navbar">+ New Complaint</button>
+
+            <div class="user-dropdown">
+                <button class="user-dropdown-btn" id="userDropdownBtn">👤</button>
+                <div class="user-dropdown-menu" id="userDropdownMenu">
+                    <button class="user-dropdown-item" id="loginBtn">Login</button>
+                    <button class="user-dropdown-item" id="registerBtn">Register</button>
+                </div>
+            </div>
+            <div class="profile-section" style="display: none;" id="profileSection">
+                <div class="profile-dropdown">
+                    <button class="btn-profile" id="profileBtn">
+                        <span class="profile-name">John Doe</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="#" class="dropdown-item verify-email">Verify Email</a>
+                        <a href="#" class="dropdown-item verify-phone">Verify Phone</a>
+                        <hr class="dropdown-divider">
+                        <a href="#" class="dropdown-item logout" id="logoutBtn2">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Filter Dropdown -->
+    <div class="mobile-filter-dropdown" id="mobileFilterDropdown">
+        <div class="mobile-filter-dropdown-content">
+            <div class="mobile-filter-header">
+                <h3>Filters</h3>
+                <button class="mobile-filter-close" id="mobileFilterCloseBtn">&times;</button>
+            </div>
+            <div class="mobile-filter-body">
+                <div class="navbar-filter-group">
+                    <label class="mobile-filter-label">Category</label>
+                    <select id="categoryFilterMobile" class="mobile-filter-select">
+                        <option value="">Category</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <label class="mobile-filter-label">Subcategory</label>
+                    <select id="subcategoryFilterMobile" class="mobile-filter-select">
+                        <option value="">Subcategory</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <label class="mobile-filter-label">Status</label>
+                    <select id="statusFilterMobile" class="mobile-filter-select">
+                        <option value="">Status</option>
+                    </select>
+                </div>
+
+                <div class="navbar-filter-group toggle-group-mobile">
+                    <button type="button" id="showAllBtnMobile" class="filter-action-btn filter-action-btn-mobile">Show All</button>
+                </div>
+
+                <div class="navbar-filter-group">
+                    <label class="mobile-filter-label">Location</label>
+                    <input type="text" id="locationFilterMobile" class="mobile-filter-select" placeholder="Search Location" autocomplete="off">
+                    <div id="locationSuggestionsMobile" class="location-suggestions" style="display: none;"></div>
+                </div>
+
+                <div class="navbar-filter-group toggle-group-mobile">
+                    <label class="toggle-label-navbar">
+                        <input type="checkbox" id="myComplaintsToggleMobile" class="toggle-checkbox-navbar">
+                        <span class="toggle-text-navbar">My Complaints Only</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Sidebar - Filters & Complaint List -->
+        <aside class="sidebar sidebar-left">
+            
+            <!-- Complaints List -->
+            <div class="complaints-list-container">
+                <h3 class="list-title">Complaints</h3>
+                <select id="timeFilter" class="complaints-time-filter">
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="last3days">Last 3 days</option>
+                    <option value="lastWeek">Last week</option>
+                    <option value="lastMonth">Last month</option>
+                    <option value="lastYear">Last year</option>
+                </select>
+                <ul class="complaints-list" id="complaintsList">
+                    <!-- Dynamically populated -->
+                </ul>
+            </div>
+            <div class="tour-restart-bar">
+                <button type="button" class="tour-restart-link" id="restartTourBtn">Tour guide</button>
+            </div>
+            
+            <!-- Mobile Comment Section - appears when complaint selected on mobile -->
+            <div class="mobile-comment-section" id="mobileCommentSection" style="display: none;">
+                <div class="section mobile-details-section">
+                    <div class="details-header">
+                        <div class="complaint-title-header">
+                            <span class="status-indicator" id="mobileStatusIndicator"></span>
+                            <h3 class="complaint-title" id="mobileComplaintTitle"></h3>
+                        </div>
+                    </div>
+                    <div class="details-content" id="mobileDetailsContent"></div>
+                </div>
+
+                <div class="section mobile-chat-section">
+                    <div class="chat-header">
+                        <div class="chat-header-content">
+                            <h3 class="chat-title" id="mobileChatTitle">New Complaint</h3>
+                            <div class="chat-date-flip" id="mobileChatDateFlip">
+                                <span class="date-front">Filed on: <span id="mobileFiledOnDate"></span></span>
+                                <span class="date-back">Last update: <span id="mobileLastUpdateDate"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="mobileChatMessages"></div>
+                    <div class="typing-indicator" id="mobileTypingIndicator" style="display: none; padding: 10px; color: #666; font-style: italic;">verifing.....</div>
+                    <div class="chat-input-wrapper">
+                        <textarea
+                            class="chat-input" 
+                            id="mobileChatInput" 
+                            placeholder="Your Query"
+                            autocomplete="off"
+                        >
+                        </textarea>
+                        <button class="chat-attach-btn" id="mobileChatAttachBtn" title="Attach file">📎</button>
+                        <button class="chat-send-btn" id="mobileChatSendBtn" title="Send message">➤</button>
+                        <input type="file" id="mobileFileInput" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Section - Map & Chart -->
+        <div class="main-content">
+            <!-- Map Section -->
+            <div class="section map-section">
+                <!-- <div class="section-header">
+                    <h2 class="section-title">📍 Complaint Locations</h2>
+                    <div class="map-controls">
+                        <button class="map-control-btn" id="zoomInBtn" title="Zoom In">+</button>
+                        <button class="map-control-btn" id="zoomOutBtn" title="Zoom Out">−</button>
+                    </div>
+                </div> -->
+                <div class="map-container" id="mapContainer">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <!-- Chart and Push Message Container -->
+            <div class="analytics-container">
+                <!-- Chart Section -->
+                <div class="section chart-section">
+                    <div class="section-header">
+                        <h2 class="section-title">📊 Complaint Analytics</h2>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-chart="category">By Category</button>
+                            <button class="chart-btn" data-chart="status">By Status</button>
+                            <button class="chart-btn" data-chart="city">By City</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="chartCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Push Message Section -->
+                <div class="section push-message-section">
+                    <div class="section-header">
+                        <h2 class="section-title">🔔 AI Insights</h2>
+                        <button class="push-clear-btn" id="pushClearBtn" title="Clear messages">🗑️</button>
+                    </div>
+                    <div class="push-messages-container" id="pushMessagesContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Details & Chat -->
+        <aside class="sidebar sidebar-right">
+            <!-- Complaint Details -->
+            <div class="details-section">
+                <div class="details-header">
+                    <div class="complaint-title-header">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        <h3 class="complaint-title" id="complaintTitle">Select a complaint to view details</h3>
+                    </div>
+                </div>
+                <div class="details-content" id="detailsContent">
+                    <div class="empty-state">
+                        <span class="empty-icon">👆</span>
+                        <p>Select a complaint to view details</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div class="chat-header">
+                    <div class="chat-header-content">
+                        <h3 class="chat-title" id="chatTitle">New Complaint</h3>
+                        <div class="chat-date-flip" id="chatDateFlip">
+                            <span class="date-front">Filed on: <span id="filedOnDate"></span></span>
+                            <span class="date-back">Last update: <span id="lastUpdateDate"></span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state">
+                        <span class="empty-icon">💭</span>
+                        <p>Write your complaint here to create a new complaint.</p>
+                    </div>
+                </div>
+                <div class="typing-indicator" id="typingIndicator" style="display: none; padding: 10px; color: #666; font-style: italic;">verifing.....</div>
+                <div class="chat-input-wrapper">
+                    <textarea
+                        class="chat-input" 
+                        id="ChatInput" 
+                        placeholder="Your Query"
+                        autocomplete="off"
+                        name="nope"
+                    ></textarea>
+                    <button class="chat-attach-btn" id="chatAttachBtn" title="Attach file">📎</button>
+                    <button class="chat-send-btn" id="chatSendBtn" title="Send message">➤</button>
+                    <input type="file" id="fileInput" style="display: none;">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal for Auth Forms -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-modal-content">
+            <button class="auth-modal-close" id="authModalClose">&times;</button>
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" data-tab="login">Login</button>
+                <button class="auth-tab-btn" data-tab="register">Register</button>
+                <button class="auth-tab-btn" data-tab="forgot">Forgot Password</button>
+            </div>
+            
+            <!-- Login Tab -->
+            <div class="auth-tab-content active" id="loginTab">
+                <h2>Login</h2>
+                <input name="email" type="email" placeholder="Email" class="auth-input" autocomplete="email">
+                <input type="password" placeholder="Password" class="auth-input">
+                <button class="auth-submit-btn">Login</button>
+            </div>
+            
+            <!-- Register Tab -->
+            <div class="auth-tab-content" id="registerTab">
+                <h2>Register</h2>
+                <input type="text" placeholder="Full Name" class="auth-input">
+                <input type="email" placeholder="Email" class="auth-input" autocomplete="email">
+                <input type="password" placeholder="Password" class="auth-input">
+                <input type="phone" placeholder="Phone" class="auth-input register-phone" autocomplete="phone">
+                <button class="auth-submit-btn">Register</button>
+            </div>
+            
+            <!-- Forgot Password Tab -->
+            <div class="auth-tab-content" id="forgotTab">
+                <h2>Forgot Password</h2>
+                <input type="email" placeholder="Enter your email" class="auth-input">
+                <button class="auth-submit-btn">Send Reset Link</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tour-overlay hidden" id="tourOverlay">
+        <div class="tour-highlight" id="tourHighlight"></div>
+        <div class="tour-card" id="tourCard">
+            <div class="tour-step" id="tourStep"></div>
+            <div class="tour-text" id="tourText"></div>
+            <div class="tour-actions">
+                <button type="button" class="tour-btn tour-btn-secondary" id="tourSkipBtn">Skip</button>
+                <button type="button" class="tour-btn tour-btn-secondary" id="tourPrevBtn">Back</button>
+                <button type="button" class="tour-btn tour-btn-primary" id="tourNextBtn">Next</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='js/script.js') }}"></script>
+</body>
+</html>
