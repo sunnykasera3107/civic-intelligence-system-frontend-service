@@ -850,12 +850,14 @@ function renderCommentMessages(complaint) {
 
 function complaint_list(){
     return new Promise((resolve, reject) => {
+        console.log("Fetching complaints from server...", Date.now());
         handleAjaxReq(
             USER_BASE_URL+'/all-complaints', "GET", 'application/json',
             null, // no payload
             null, // default timeout
             (response) => {
                 complaintsData = response.json
+                console.log("Complaints fetched:", Date.now());
                 resolve(response.json);
                 return
             }
@@ -1967,6 +1969,7 @@ function changeChartView(type) {
 
 async function isUserLoggedIn() {
     try {
+        console.log("Accessing /me endpoint at " + Date.now());
         const res = await fetch("/me", {
             method: "GET",
             credentials: "include"
@@ -1975,8 +1978,8 @@ async function isUserLoggedIn() {
         if (!res.ok) {
             throw new Error("Not authenticated");
         }
-
         const data = await res.json();
+        console.log("Received user data at " + Date.now());
         localStorage.setItem("user", JSON.stringify(data));
 
         appState.isLoggedIn = true;
