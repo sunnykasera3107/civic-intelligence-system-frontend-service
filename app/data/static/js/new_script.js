@@ -9,7 +9,7 @@ let categoriesMap = {
   status: {}
 };
 
-let USER_BASE_URL = ""
+let USER_BASE_URL = "http://localhost:7071/api"
 
 // Fallback function to initialize categories if fetch fails
 function initializeCategoriesMapFallback() {
@@ -218,7 +218,7 @@ function getSubcategoryByName(name) {
 
 let appState = {
     isLoggedIn: false,
-    currentUser: null,
+    currentUser: { id: 1, name: "John Doe" },
     selectedComplaintId: null,
     filteredComplaints: complaintsData,
     filterState: {
@@ -355,17 +355,10 @@ function getUserLocation() {
 // INITIALIZATION
 // ========================================
 
-function getComplaints() {
-    if (!complaintsData) {
-        complaintsData = complaint_list(); // called only once
-    }
-    return complaintsData;
-}
-
 $(document).ready(function() {
     console.log("CitizenCare System Initialized");
 
-    getComplaints().then(complaints => {
+    complaint_list().then(complaints => {
         complaintsData = complaints
         console.log("Complaints acquired:", complaints);
         // Initialize fallback categories immediately (will be overwritten if fetch succeeds)
@@ -405,15 +398,11 @@ async function initializeUserSetup(){
     if (appState.isLoggedIn) {
         $(".user-dropdown").hide()
         user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
-        if (user?.email_verified) {
+        if (user.email_verified) {
             $(".verify-email").hide()
-        } else {
-            $(".verify-email").show()
         }
-        if (user?.phone_verified) {
+        if (user.phone_verified) {
             $(".verify-phone").remove()
-        } else {
-            $(".verify-phone").show()
         }
     }else{
         $(".user-dropdown").show()
@@ -633,7 +622,7 @@ function renderComplaintsList() {
     $list.empty();
     
     if (!appState.filteredComplaints || appState.filteredComplaints.length === 0) {
-        $list.html('<li class="empty-state"><span class="empty-icon">ðŸ“­</span><p>No complaints found</p></li>');
+        $list.html('<li class="empty-state"><span class="empty-icon">­</span><p>No complaints found</p></li>');
         return;
     }
     
@@ -682,7 +671,7 @@ function selectComplaint(complaintId) {
     setChatMode(true);
     renderComplaintsList();
     handleAjaxReq(
-        USER_BASE_URL + "/get-comments/" + parseInt(complaint.id),
+        USER_BASE_URL + "/comment/?action=GET_COMMENTS&complaint_id=" + parseInt(complaint.id),
         "GET",
         "application/json",
         null,
@@ -863,7 +852,9 @@ function renderCommentMessages(complaint) {
 function complaint_list(){
     return new Promise((resolve, reject) => {
         handleAjaxReq(
-            USER_BASE_URL+'/all-complaints', "GET", 'application/json',
+            USER_BASE_URL+'/complaint?action=ALL_COMPLAINTS', 
+            "GET", 
+            'application/json',
             null, // no payload
             null, // default timeout
             (response) => {
@@ -889,12 +880,11 @@ async function sendMessage() {
 
     const file_path = "file-path";
     const comments = [];
-    let coords = JSON.parse(sessionStorage.getItem(SESSION_LOCATION_KEY));
+    let coords = JSON.parse(sessionStorage.getItem(SESSION_LOCATION_KEY))
 
-    coords = coords ? [coords.latitude, coords.longitude] : null;
+    coords = coords ? [coords.latitude, coords.longitude] : null
 
-    user = appState.currentUser;
-
+    user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
 
     $('#typingIndicator').show();
     setTimeout(function() {
@@ -913,7 +903,7 @@ async function sendMessage() {
             action: "ADD_COMMENT"
         };
         await handleAjaxReq(
-            USER_BASE_URL+'/add-comment', "POST", 'application/json',
+            USER_BASE_URL+'/comment', "POST", 'application/json',
             JSON.stringify(comment),
             null, // default timeout
             (response) => {
@@ -934,7 +924,7 @@ async function sendMessage() {
     $input.val('');
 
     await handleAjaxReq(
-        USER_BASE_URL+'/ai-query', "POST", 'application/json',
+        USER_BASE_URL+'/ai', "POST", 'application/json',
         JSON.stringify({
             query: message,
             messages: comments,
@@ -945,7 +935,6 @@ async function sendMessage() {
         (response) => {
             $('#typingIndicator').text('verifing.....');
             $('#typingIndicator').hide();
-            console.log(response);
             try{
                 json_response = JSON.parse(response.content);
                 json_response = JSON.parse(json_response.response);
@@ -995,22 +984,22 @@ async function sendMessage() {
         }
     )
 
-    const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
-    if (!complaint) return;
+    // const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
+    // if (!complaint) return;
     
-    // Add comment to complaint
-    complaint.comments.push({
-        id: complaint.comments.length + 1,
-        user: appState.currentUser.name,
-        text: message,
-        own: true,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        file: null
-    });
+    // // Add comment to complaint
+    // complaint.comments.push({
+    //     id: complaint.comments.length + 1,
+    //     user: appState.currentUser.name,
+    //     text: message,
+    //     own: true,
+    //     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    //     file: null
+    // });
     
-    // Clear input and refresh comments
-    $input.val('');
-    renderCommentMessages(complaint);
+    // // Clear input and refresh comments
+    // $input.val('');
+    // renderCommentMessages(complaint);
 }
 
 function updateComplaintStatus(complaintId, statusId){
@@ -1022,7 +1011,7 @@ function updateComplaintStatus(complaintId, statusId){
     }
     user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
     handleAjaxReq(
-        USER_BASE_URL+"/complaint-update",
+        USER_BASE_URL+"/complaint",
         'POST',
         'application/json',
         JSON.stringify({
@@ -1108,47 +1097,23 @@ function handleFileUpload(event) {
     formData.append("user", user.name);
     formData.append("action", "ADD_COMMENT");
 
-    handleAjaxReq(
-        USER_BASE_URL + '/upload-file',
-        'POST',
-        false,
+     handleAjaxReq(
+        USER_BASE_URL + '/comment', "POST", 'multipart/form-data',
         formData,
-        null,
+        null, // default timeout
         (response) => {
-            console.log(response)
-            let comment = {
-                user: user.name,
-                userId: user.id,
-                complaintId: appState.selectedComplaintId,
-                comment: "<a target='_blank' href='" + response+"'>Attached File</a>",
-                file: JSON.stringify({
-                    'size': file.size,
-                    'type': file.type,
-                    'name': file.name,
-                    'path': response
-                })
-            };
-            console.log(file)
-            handleAjaxReq(
-                USER_BASE_URL + '/add-comment', "POST", 'application/json',
-                JSON.stringify(comment),
-                null, // default timeout
-                (response) => {
-                    const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
-                    if (!complaint) return;
-                    if (!complaint.comments) complaint.comments = []
-                    response.json.text = response.json.comment
-                    response.json.own = true
-                    complaint.comments.push(response.json);
-                    renderCommentMessages(complaint);
-                    updateComplaintStatus(complaint.id, 2)
-                }
-            );
-            addPushMessage("Wait for few seconds.\nI am trying to get some information to help you faster.", "ai-response");
-            return;
-        },
-        false
-    )
+            const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
+            if (!complaint) return;
+            if (!complaint.comments) complaint.comments = []
+            response.json.text = response.json.comment
+            response.json.own = true
+            complaint.comments.push(response.json);
+            renderCommentMessages(complaint);
+            updateComplaintStatus(complaint.id, 2)
+        }
+    );
+    addPushMessage("Wait for few seconds.\nI am trying to get some information to help you faster.", "ai-response");
+    return;
 }
 
 function sleep(ms) {
@@ -1164,7 +1129,7 @@ async function createBasicComplaint(newComplaint) {
     newComplaint["action"] = "REGISTER"
 
     handleAjaxReq(
-        USER_BASE_URL+'/complaint-register',
+        USER_BASE_URL+"/complaint",
         'POST',
         'application/json',
         JSON.stringify(newComplaint),
@@ -1172,14 +1137,11 @@ async function createBasicComplaint(newComplaint) {
         (response) => {
             $('#typingIndicator').text('verifing.....');
             $('#typingIndicator').hide();
-            console.log(response);
-            if (Array.isArray(response.json) && response.json.length > 0) {
-                newComplaint = response.json.at(-1);
-                complaintsData.unshift(newComplaint);
-                appState.filteredComplaints.unshift(newComplaint);
-            }else{
-                newComplaint = response.json;
-            }            
+            console.log(response)
+            newComplaint = response.json
+
+            complaintsData.unshift(newComplaint);
+            appState.filteredComplaints.unshift(newComplaint);
             selectComplaint(newComplaint.id);
             renderComplaintsList();
             updateChart();
@@ -1978,7 +1940,6 @@ function changeChartView(type) {
 // AUTHENTICATION
 // ========================================
 
-
 async function isUserLoggedIn() {
     try {
         const res = await fetch("/me", {
@@ -1989,6 +1950,7 @@ async function isUserLoggedIn() {
         if (!res.ok) {
             throw new Error("Not authenticated");
         }
+
         const data = await res.json();
         localStorage.setItem("user", JSON.stringify(data));
 
@@ -2039,7 +2001,7 @@ function handleLogin($btn, email, password) {
     $btn.html('<span class="auth-loading">⏳</span> Wait...').prop('disabled', true);
 
     handleAjaxReq(
-        USER_BASE_URL+'/login',
+        USER_BASE_URL+"/user",
         'POST',
         'application/json',
         JSON.stringify({
@@ -2070,7 +2032,7 @@ function handleRegister($btn, name, email, password, phone) {
         .prop('disabled', true);
 
     handleAjaxReq(
-        USER_BASE_URL + '/register',
+        USER_BASE_URL+"/user",
         'POST',
         'application/json',
         JSON.stringify({
@@ -2092,31 +2054,25 @@ function handleRegister($btn, name, email, password, phone) {
 }
 
 async function handleVerifyEmail() {
-    try {
-        const user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
-        const res = await fetch("/send_verification_email/"+user.id, {
-            method: "GET",
-            credentials: "include"
-        });
-
-        if (!res.ok) {
-            throw new Error("Not authenticated");
+    const user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
+    handleAjaxReq(
+        USER_BASE_URL + "/user?action=SEND_VERIFICATION_LINK&id=" + user.id,
+        "GET",
+        "application/json",
+        null,
+        null,
+        (response) => {
+            console.log(response)
+            alert(response.json.message)
         }
-
-        const data = await res.json();
-        alert("A email for verification sent on your email address.")
-
-    } catch (err) {
-        console.error(err);
-    }
+    )
 }
 
 function handleForgotPassword($btn, email) {
     const originalText = $btn.text();
     $btn.html('<span class="auth-loading">⏳</span> Wait...').prop('disabled', true);
-
     handleAjaxReq(
-        USER_BASE_URL+'/forget',
+        USER_BASE_URL+"/user",
         'POST',
         'application/json',
         JSON.stringify({
@@ -2127,10 +2083,8 @@ function handleForgotPassword($btn, email) {
         (response) => {
             closeAuthModal();
             $btn.html(originalText).prop('disabled', false);
-            alert(response.json?.message || 'Password reset link sent to your email');
-        },
-        null,
-        true
+            alert(response.json.message);
+        }
     )
 }
 
@@ -2138,9 +2092,8 @@ function handleForgotPassword($btn, email) {
 async function handleResetPassword($btn, password, token) {
     const originalText = $btn.text();
     $btn.html('<span class="auth-loading">⏳</span> Wait...').prop('disabled', true);
-
     handleAjaxReq(
-        USER_BASE_URL+'/reset',
+        USER_BASE_URL+"/user",
         'POST',
         'application/json',
         JSON.stringify({
@@ -2150,7 +2103,7 @@ async function handleResetPassword($btn, password, token) {
         }),
         null,
         (response) => {
-            alert(response.json?.message || 'Reset password successfully. You will be redirected automatically.');
+            alert(response.json.message);
             setTimeout(() => {
                 window.location.href = "/"    
             }, 2000);
@@ -2163,6 +2116,17 @@ async function handleResetPassword($btn, password, token) {
 function handleLogout() {
     appState.isLoggedIn = false;
     appState.selectedComplaintId = null;
+    handleAjaxReq(
+        USER_BASE_URL + "/user?action=SEND_VERIFICATION_LINK&id=" + user.id,
+        "GET",
+        "application/json",
+        null,
+        null,
+        (response) => {
+            console.log(response)
+            alert(response.json.message)
+        }
+    )
     fetch("/logout", {
         method: "POST",
         credentials: "include"

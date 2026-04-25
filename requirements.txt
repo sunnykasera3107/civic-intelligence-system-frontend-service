@@ -8,3 +8,4 @@ pydantic
 phonenumbers
 fastapi_mail
 redis
+PyJWT
