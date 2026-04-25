@@ -239,6 +239,7 @@ let appState = {
 
 const SESSION_LOCATION_KEY = 'civicUserLocation';
 const SESSION_TOUR_KEY = 'civicUserTourSeen';
+const SESSION_USER_KEY = 'civicUser'
 const tourSteps = [
     {
         text: 'To file a complaint login/register on the website from here.',
@@ -354,10 +355,17 @@ function getUserLocation() {
 // INITIALIZATION
 // ========================================
 
+function getComplaints() {
+    if (!complaintsData) {
+        complaintsData = complaint_list(); // called only once
+    }
+    return complaintsData;
+}
+
 $(document).ready(function() {
     console.log("CitizenCare System Initialized");
 
-    complaint_list().then(complaints => {
+    getComplaints().then(complaints => {
         complaintsData = complaints
         console.log("Complaints acquired:", complaints);
         // Initialize fallback categories immediately (will be overwritten if fetch succeeds)
@@ -396,7 +404,7 @@ async function initializeUserSetup(){
     await isUserLoggedIn()
     if (appState.isLoggedIn) {
         $(".user-dropdown").hide()
-        user = JSON.parse(localStorage.getItem("user"))
+        user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
         if (user.email_verified) {
             $(".verify-email").hide()
         }
@@ -425,7 +433,7 @@ function initializeEventListeners() {
             openAuthModal('login');
             return
         }
-        user = JSON.parse(localStorage.getItem("user"))
+        user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
         const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
         if (complaint.complainer == user.id){
             updateComplaintStatus(complaint.id, 3)
@@ -677,7 +685,7 @@ function selectComplaint(complaintId) {
         null,
         (response) => {
             if (response.json){
-                user = JSON.parse(localStorage.getItem("user"))
+                user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
                 response.json.forEach(function(val, key){
                     response.json[key].text = val.comment
                     response.json[key].own = (response.json[key].userId == user.id) ? true : false
@@ -883,7 +891,7 @@ async function sendMessage() {
 
     coords = coords ? [coords.latitude, coords.longitude] : null
 
-    user = JSON.parse(localStorage.getItem("user"))
+    user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
 
     $('#typingIndicator').show();
     setTimeout(function() {
@@ -1007,7 +1015,7 @@ function updateComplaintStatus(complaintId, statusId){
         openAuthModal('login');
         return;
     }
-    user = JSON.parse(localStorage.getItem("user"))
+    user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
     handleAjaxReq(
         USER_BASE_URL+"/complaint-update",
         'POST',
@@ -1024,7 +1032,7 @@ function updateComplaintStatus(complaintId, statusId){
     )
 }
 
-async function handleAjaxReq(endpoint, type, content_type, payload = null, timeout = null, callback, processData = null){
+async function handleAjaxReq(endpoint, type, content_type, payload = null, timeout = null, callback, processData = null, Credentials = false){
     let req = {};
 
     if (endpoint) req.url = endpoint;
@@ -1040,6 +1048,12 @@ async function handleAjaxReq(endpoint, type, content_type, payload = null, timeo
 
     if (payload) req.data = payload;
     if (timeout) req.timeout = timeout;
+
+    if (Credentials) {
+        req.xhrFields = {
+            withCredentials: true
+        }
+    }
 
     req.success = function(response) {
         callback(response);
@@ -1063,8 +1077,7 @@ function handleFileUpload(event) {
         return;
     }
 
-    user = localStorage.getItem("user")
-    user = JSON.parse(user)
+    user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
     
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
@@ -2112,8 +2125,8 @@ function handleRegister($btn, name, email, password, phone) {
 
 async function handleVerifyEmail() {
     try {
-        const user_id = JSON.parse(localStorage.getItem("user"))
-        const res = await fetch("/send_verification_email/"+user_id.id, {
+        const user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
+        const res = await fetch("/send_verification_email/"+user.id, {
             method: "GET",
             credentials: "include"
         });
