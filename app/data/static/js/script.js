@@ -804,20 +804,22 @@ function renderComplaintDetails(complaint) {
             <div class="detail-label">Location</div>
             <div class="detail-value">${complaint.location}</div>
         </div>
+        <div class="detail-item" style="flex: 1; margin: 0; min-width: 0;">
+            <div class="detail-label">Assigned To</div>
+            <div class="detail-value">${complaint.officer || 'Unassigned'}</div>
+        </div>
+        ${[1,2].includes(complaint.statusId) ? `
+        <div class="detail-item" style="flex: 1; margin: 0; min-width: 0;">
+            <div class="detail-label">Resolved</div>
+            <div class="detail-value"><a href="#" id="complaintResolved">Yes</a></div>
+        </div>
+        ` : ''}
         <div class="detail-item" style="width: 100%; margin-bottom: 8px;">
             <div class="detail-label">Description</div>
             <div class="detail-value">${complaint.description}</div>
         </div>
     `;
 
-    if ([1,2].includes(complaint.statusId)){
-        html += `
-            <div class="detail-item" style="width: 100%; margin-bottom: 8px;">
-                <div class="detail-value">Complaint Resolved? <a href="#" id="complaintResolved">Yes</a></div>
-            </div>
-        `
-    }
-    
     $content.html(html);
     
     // Update chat header dates
@@ -2448,6 +2450,18 @@ function renderMobileComplaintDetails(complaint) {
         <div class="detail-item">
             <div class="detail-label">Location</div>
             <div class="detail-value">${complaint.location}</div>
+        </div>
+        <div style="display: flex; gap: 16px; width: 100%; margin-bottom: 8px;">
+            <div class="detail-item" style="flex: 1; margin: 0; min-width: 0;">
+                <div class="detail-label">Assigned To</div>
+                <div class="detail-value">${complaint.officer || 'Unassigned'}</div>
+            </div>
+            ${[1,2].includes(complaint.statusId) ? `
+            <div class="detail-item" style="flex: 1; margin: 0; min-width: 0;">
+                <div class="detail-label">Resolved</div>
+                <div class="detail-value"><a href="#" id="complaintResolved">Yes</a></div>
+            </div>
+            ` : ''}
         </div>
         <div class="detail-item" style="width: 100%; margin-bottom: 8px;">
             <div class="detail-label">Description</div>
