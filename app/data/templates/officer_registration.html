@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Intelligence System - Officer Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin=""
+    >
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--color-bg);
+        }
+
+        .officer-registration-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 100px 20px 40px;
+        }
+
+        .officer-registration-card {
+            background-color: var(--color-bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            padding: 40px;
+            width: 100%;
+            max-width: 900px;
+            border: 1px solid var(--color-border);
+        }
+
+        .officer-registration-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .officer-registration-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-text);
+            margin: 0 0 10px 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .officer-registration-header p {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            margin: 0;
+        }
+
+        .officer-registration-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text);
+            display: block;
+        }
+
+        .password-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--color-bg-secondary);
+            color: var(--color-text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            box-sizing: border-box;
+            transition: all var(--transition-speed);
+        }
+
+        .password-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background-color: var(--color-bg-secondary);
+        }
+
+        .password-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--color-text-light);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .map-wrapper {
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: var(--color-bg-secondary);
+        }
+
+        #officerLocationMap {
+            width: 100%;
+            height: 320px;
+        }
+
+        .leaflet-container {
+            background-color: #e5e7eb;
+        }
+
+        .leaflet-container img,
+        .leaflet-container svg,
+        .leaflet-container canvas,
+        .leaflet-pane,
+        .leaflet-tile,
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow {
+            max-width: none !important;
+            max-height: none !important;
+        }
+
+        .leaflet-container img {
+            width: auto !important;
+            height: auto !important;
+        }
+
+        .map-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            border-top: 1px solid var(--color-border);
+            flex-wrap: wrap;
+        }
+
+        .range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .range-input {
+            flex: 1;
+            accent-color: var(--color-primary);
+        }
+
+        .range-value {
+            min-width: 58px;
+            padding: 9px 10px;
+            border-radius: 6px;
+            background-color: rgba(37, 99, 235, 0.08);
+            color: var(--color-primary-dark);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .register-officer-btn {
+            width: 100%;
+            padding: 11px 16px;
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin-top: 4px;
+        }
+
+        .register-officer-btn:hover {
+            background-color: var(--color-primary-dark);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .register-officer-btn:active {
+            transform: translateY(0);
+        }
+
+        .navbar {
+            box-shadow: var(--shadow-sm);
+        }
+
+        @media (max-width: 768px) {
+            .officer-registration-card {
+                padding: 30px 20px;
+            }
+
+            .officer-registration-header h1 {
+                font-size: 24px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #officerLocationMap {
+                height: 260px;
+            }
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-left">
+            <div class="logo">
+                <span class="logo-text">Civic Intelligence System</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="officer-registration-container">
+        <div class="officer-registration-card">
+            <div class="officer-registration-header">
+                <h1>Officer Registration</h1>
+                <p>Create officer account details and service coverage information</p>
+            </div>
+
+            <form class="officer-registration-form" method="post">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="officerName">Name</label>
+                        <input
+                            type="text"
+                            class="password-input"
+                            id="officerName"
+                            name="name"
+                            placeholder="Enter officer name"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="officerEmail">Email</label>
+                        <input
+                            type="email"
+                            class="password-input"
+                            id="officerEmail"
+                            name="email"
+                            placeholder="Enter officer email"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="officerPhone">Phone</label>
+                        <input
+                            type="tel"
+                            class="password-input"
+                            id="officerPhone"
+                            name="phone"
+                            placeholder="Enter phone number"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="officerPassword">Password</label>
+                        <input
+                            type="password"
+                            class="password-input"
+                            id="officerPassword"
+                            name="password"
+                            placeholder="Enter password"
+                            autocomplete="new-password"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="officerDepartment">Department</label>
+                        <select class="form-select" id="officerDepartment" name="department" required>
+                            <option value="">Select department</option>
+                            <option value="Road Maintenance">Road Maintenance</option>
+                            <option value="Water Supply">Water Supply</option>
+                            <option value="Waste Management">Waste Management</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Public Health">Public Health</option>
+                            <option value="Sanitation">Sanitation</option>
+                            <option value="Street Lighting">Street Lighting</option>
+                            <option value="Drainage Maintenance">Drainage Maintenance</option>
+                            <option value="Traffic Control">Traffic Control</option>
+                            <option value="Public Safety">Public Safety</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="areaRange">Area Range</label>
+                        <div class="range-wrapper">
+                            <input
+                                type="range"
+                                class="range-input"
+                                id="areaRange"
+                                name="area_range"
+                                min="1"
+                                max="50"
+                                value="10"
+                            >
+                            <span class="range-value" id="areaRangeValue">10 km</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="officerLocationMap">Location Select On Map</label>
+                        <div class="map-wrapper">
+                            <div id="officerLocationMap"></div>
+                            <div class="map-meta">
+                                <span id="selectedCoordinates">Latitude: 21.1458 Longitude: 79.0882</span>
+                                <span>Click map to set location</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="locationLatitude" name="latitude" value="21.1458">
+                        <input type="hidden" id="locationLongitude" name="longitude" value="79.0882">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="additionalInfo">Additional Info</label>
+                        <textarea
+                            class="form-textarea"
+                            id="additionalInfo"
+                            name="additional_info"
+                            placeholder="Enter additional officer information"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <button type="button" class="register-officer-btn">Register Officer</button>
+            </form>
+        </div>
+    </div>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        crossorigin=""
+    ></script>
+    <script>
+        const defaultLat = 21.1458;
+        const defaultLng = 79.0882;
+
+        const areaRangeInput = document.getElementById('areaRange');
+        const areaRangeValue = document.getElementById('areaRangeValue');
+        const selectedCoordinates = document.getElementById('selectedCoordinates');
+        const latitudeInput = document.getElementById('locationLatitude');
+        const longitudeInput = document.getElementById('locationLongitude');
+
+        function updateRangeValue() {
+            areaRangeValue.textContent = areaRangeInput.value + ' km';
+        }
+
+        function updateCoordinates(lat, lng) {
+            latitudeInput.value = lat.toFixed(6);
+            longitudeInput.value = lng.toFixed(6);
+            selectedCoordinates.textContent = 'Latitude: ' + lat.toFixed(6) + ' Longitude: ' + lng.toFixed(6);
+        }
+
+        areaRangeInput.addEventListener('input', updateRangeValue);
+        updateRangeValue();
+
+        const map = L.map('officerLocationMap').setView([defaultLat, defaultLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'OpenStreetMap'
+        }).addTo(map);
+
+        const marker = L.marker([defaultLat, defaultLng], {
+            draggable: true
+        }).addTo(map);
+
+        map.on('click', function(event) {
+            const lat = event.latlng.lat;
+            const lng = event.latlng.lng;
+            marker.setLatLng([lat, lng]);
+            updateCoordinates(lat, lng);
+        });
+
+        marker.on('dragend', function(event) {
+            const position = event.target.getLatLng();
+            updateCoordinates(position.lat, position.lng);
+        });
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 13);
+                marker.setLatLng([lat, lng]);
+                updateCoordinates(lat, lng);
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 100);
+            });
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        });
+
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
+        });
+    </script>
+    <script src="{{ url_for('static', path='js/script.js') }}"></script>
+</body>
+</html>

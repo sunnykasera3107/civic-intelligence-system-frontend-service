@@ -362,6 +362,8 @@ function getComplaints() {
     return complaintsData;
 }
 
+
+
 $(document).ready(function() {
     console.log("CitizenCare System Initialized");
 
@@ -384,12 +386,17 @@ $(document).ready(function() {
             initializeEventListeners();
             
             // Set up auth UI
-            updateAuthUI();
-            populateFilterDropdowns();
-            applyFilters(); // Apply default filter based on user location
-            initializeChart();
-            initializeMap();
-            setTimeout(startTourIfNeeded, 400);
+            if (!window.location.href.includes("reset_password") && !window.location.href.includes("officer_registration")) {
+            
+                updateAuthUI();
+                populateFilterDropdowns();
+                applyFilters(); // Apply default filter based on user location
+                initializeChart();
+                initializeMap();
+                setTimeout(startTourIfNeeded, 400);
+            }else{
+                console.log(window.location.href)
+            }
         });
 
     });
@@ -489,10 +496,27 @@ function initializeEventListeners() {
             alert('Please enter the password');
             return;
         }
-
         handleResetPassword($btn, password, token);
-        
     });
+
+    $('.register-officer-btn').on('click', function(e) {
+        e.preventDefault();
+        $btn = $(this);
+        const officer_details = {
+            "name": $('#officerName').val(),
+            "email": $('#officerEmail').val(),
+            "phone": $("#officerPhone").val(),
+            "password": $('#officerPassword').val(),
+            "department": $("#officerDepartment").val(),
+            "arearange": $("#areaRange").val(),
+            "latitude": $("#locationLatitude").val(),
+            "longitude": $("#locationLongitude").val(),
+            "additional_info": $("#additionalInfo").val()
+        };
+
+        handleOfficerRegister($btn, officer_details);
+        return;
+    });    
     
     // Auth Submit Buttons
     $('.auth-submit-btn').on('click', function() {
@@ -682,17 +706,17 @@ function selectComplaint(complaintId) {
     setChatMode(true);
     renderComplaintsList();
     handleAjaxReq(
-        USER_BASE_URL + "/get-comments/" + parseInt(complaint.id),
+        USER_BASE_URL + "/get-comments/" + parseInt(complaintId),
         "GET",
         "application/json",
         null,
         null,
         (response) => {
             if (response.json){
-                user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
+                user = appState.currentUser
                 response.json.forEach(function(val, key){
                     response.json[key].text = val.comment
-                    response.json[key].own = (response.json[key].userId == user.id) ? true : false
+                    response.json[key].own = (user !== null && response.json[key].userId === user.id) ? true : false
                 })
                 complaint.comments = response.json
             }
@@ -829,7 +853,11 @@ function renderCommentMessages(complaint) {
     
     complaint.comments.forEach(comment => {
         
-        let file = JSON.parse(comment.file);
+        console.log(comment)
+        let file = "";
+        if (comment.file != "" && comment.file != null){
+            let file = JSON.parse(comment.file);
+        }
 
         const fileInfo = file != "" ? `<div style="font-size: 11px; color: var(--color-primary); margin-top: 4px;"> ${file.name} (${(file.size / 1024).toFixed(1)}KB)</div>` : '';
         let file_render = "";
@@ -917,10 +945,10 @@ async function sendMessage() {
             JSON.stringify(comment),
             null, // default timeout
             (response) => {
-                const complaint = complaintsData.find(c => c.id === appState.selectedComplaintId);
+                const complaint = complaintsData.find(c => c.id === response.json.complaintId);
                 if (!complaint) return;
-                if (!complaint.comments) complaint.comments = []
-                response.json.text = response.json.comment
+                if (!complaint.comments) complaint.comments = [];
+                response.json.text = response.json.comment;
                 complaint.comments.push(response.json);
                 $input.val('');
                 renderCommentMessages(complaint);
@@ -945,7 +973,6 @@ async function sendMessage() {
         (response) => {
             $('#typingIndicator').text('verifing.....');
             $('#typingIndicator').hide();
-            console.log(response);
             try{
                 json_response = JSON.parse(response.content);
                 json_response = JSON.parse(json_response.response);
@@ -984,6 +1011,7 @@ async function sendMessage() {
                     longitude: coords[1],
                     createdAt: current_time,
                     userId: user ? user.id : null,
+                    userName: user ? user.name : null,
                     file_path: "",
                     comments: []
                 }
@@ -1020,7 +1048,7 @@ function updateComplaintStatus(complaintId, statusId){
         openAuthModal('login');
         return;
     }
-    user = JSON.parse(localStorage.getItem(SESSION_USER_KEY))
+    user = appState.currentUser;
     handleAjaxReq(
         USER_BASE_URL+"/complaint-update",
         'POST',
@@ -1066,7 +1094,7 @@ async function handleAjaxReq(endpoint, type, content_type, payload = null, timeo
     };
 
     req.error = function(xhr, status, error) {
-        console.error(xhr.responseText);
+        console.log("Error:", xhr.responseText);
     };
 
     $.ajax(req);
@@ -1115,7 +1143,6 @@ function handleFileUpload(event) {
         formData,
         null,
         (response) => {
-            console.log(response)
             let comment = {
                 user: user.name,
                 userId: user.id,
@@ -1128,7 +1155,6 @@ function handleFileUpload(event) {
                     'path': response
                 })
             };
-            console.log(file)
             handleAjaxReq(
                 USER_BASE_URL + '/add-comment', "POST", 'application/json',
                 JSON.stringify(comment),
@@ -1159,8 +1185,10 @@ async function createBasicComplaint(newComplaint) {
     $('#typingIndicator').show();
     $('#typingIndicator').text('filing complaint....');
 
-    newComplaint["complainer"] = newComplaint.userId
-    newComplaint["officer"] = 0
+    newComplaint["complainerId"] = newComplaint.userId
+    newComplaint["officerId"] = 0
+    newComplaint["complainer"] = newComplaint.userName
+    newComplaint["officer"] = ""
     newComplaint["action"] = "REGISTER"
 
     handleAjaxReq(
@@ -1172,14 +1200,13 @@ async function createBasicComplaint(newComplaint) {
         (response) => {
             $('#typingIndicator').text('verifing.....');
             $('#typingIndicator').hide();
-            console.log(response);
             if (Array.isArray(response.json) && response.json.length > 0) {
                 newComplaint = response.json.at(-1);
                 complaintsData.unshift(newComplaint);
                 appState.filteredComplaints.unshift(newComplaint);
             }else{
                 newComplaint = response.json;
-            }            
+            }
             selectComplaint(newComplaint.id);
             renderComplaintsList();
             updateChart();
@@ -2085,6 +2112,31 @@ function handleRegister($btn, name, email, password, phone) {
             closeAuthModal();
             $btn.html(originalText).prop('disabled', false);
             alert('Registration successful');
+        },
+        null,
+        true
+    )
+}
+
+
+function handleOfficerRegister($btn, officer_details) {
+    const originalText = $btn.text();
+
+    $btn.html('<span class="auth-loading">⏳</span> Wait...')
+        .prop('disabled', true);
+
+    handleAjaxReq(
+        USER_BASE_URL + '/register-officer',
+        'POST',
+        'application/json',
+        JSON.stringify(officer_details),
+        null,
+        (response) => {
+            console.log(response);
+            alert('Registration successful, You will be redirected to complaint board...');
+            setTimeout(function(){
+                window.location.href = "/";
+            }, 2000)
         },
         null,
         true

@@ -40,6 +40,34 @@ async def register(request: Request):
     }
 
 
+@router.post("/register-officer")
+async def register(request: Request):
+    body = await request.body()
+
+    headers = dict(request.headers)
+    headers.pop("host", None)
+
+    res = await _http_client.post(
+        os.getenv("USER_SERVICE_URL") + "/register-officer",
+        content=body,
+        headers=headers
+    )
+    if not res:
+        raise HTTPException(
+            status_code=502,
+            detail="User service failed or unreachable"
+        )
+
+    if res:
+        headers = dict(res["headers"])
+        headers.pop("content-length", None)
+        headers.pop("content-encoding", None)
+
+    return {
+        "message": "Registered successfully!"
+    }
+
+
 @router.post("/login")
 async def login(request: Request, response: Response):
     body = await request.body()
@@ -169,6 +197,16 @@ async def reset_password(request: Request, reset_token: str):
         {
              "request": request,
              "token": reset_token
+        }
+    )
+
+
+@router.get("/officer_registration")
+async def officer_registration(request: Request):
+    return templates.TemplateResponse(
+        "officer_registration.html",
+        {
+            "request": request
         }
     )
 
